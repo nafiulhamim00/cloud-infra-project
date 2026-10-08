@@ -10,7 +10,8 @@ managed Azure PaaS services instead of Docker Compose or Kubernetes for the data
   [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/overview) environment,
   external HTTP ingress on port 8080, scales 1→3 replicas.
 - **Azure Database for MySQL Flexible Server** (Burstable B1ms) — the database tier.
-- **Azure Cache for Redis** (Basic C0) — the cache tier.
+- **Azure Managed Redis** (Balanced B0) — the cache tier. (Azure Cache for Redis, the older
+  offering, is being retired and refuses new deployments — this is its replacement.)
 - **Log Analytics Workspace** — required by Container Apps for logs/metrics.
 
 There's no nginx tier here — Container Apps provides ingress, TLS, and scaling natively.
@@ -37,7 +38,7 @@ Checked against the Azure Retail Prices API for this subscription's region (swed
 | Resource | Rate |
 |---|---|
 | MySQL Flexible Server (B1ms) | $0.0199/hour |
-| Azure Cache for Redis (Basic C0) | $0.022/hour |
+| Azure Managed Redis (Balanced B0) | $0.017/hour |
 
 A demo session (apply, test, `terraform destroy` within an hour or two) costs a few cents. Left
 running continuously it's roughly $30/month combined — still easily covered by the Azure for

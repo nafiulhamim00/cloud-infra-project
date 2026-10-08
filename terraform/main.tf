@@ -77,17 +77,23 @@ resource "azurerm_mysql_flexible_server_firewall_rule" "allow_my_ip" {
   end_ip_address      = var.my_ip_address
 }
 
-# --- Cache tier: Azure Cache for Redis ---
+# --- Cache tier: Azure Managed Redis ---
+# (Azure Cache for Redis is being retired; new deployments must use this instead.)
 
-resource "azurerm_redis_cache" "main" {
-  name                 = "redis-${local.name_prefix}"
-  resource_group_name  = azurerm_resource_group.main.name
-  location             = azurerm_resource_group.main.location
-  capacity             = 0
-  family               = "C"
-  sku_name             = "Basic"
-  non_ssl_port_enabled = false
-  minimum_tls_version  = "1.2"
+resource "azurerm_managed_redis" "main" {
+  name                = "redis-${local.name_prefix}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  sku_name            = "Balanced_B0"
+  # Defaults to true, which runs 2 nodes (2x cost) - not needed for a demo.
+  high_availability_enabled = false
+
+  default_database {
+    client_protocol = "Encrypted"
+    # Defaults to false (Entra ID auth only); the app authenticates with a
+    # password, so access-key auth needs to be turned on explicitly.
+    access_keys_authentication_enabled = true
+  }
 }
 
 # --- App tier: Go web service, public ---
@@ -104,7 +110,7 @@ resource "azurerm_container_app" "app" {
   }
   secret {
     name  = "redis-password"
-    value = azurerm_redis_cache.main.primary_access_key
+    value = azurerm_managed_redis.main.default_database[0].primary_access_key
   }
 
   template {
@@ -143,11 +149,11 @@ resource "azurerm_container_app" "app" {
       }
       env {
         name  = "REDIS_HOST"
-        value = azurerm_redis_cache.main.hostname
+        value = azurerm_managed_redis.main.hostname
       }
       env {
         name  = "REDIS_PORT"
-        value = tostring(azurerm_redis_cache.main.ssl_port)
+        value = tostring(azurerm_managed_redis.main.default_database[0].port)
       }
       env {
         name        = "REDIS_PASSWORD"
