@@ -37,6 +37,14 @@ resource "azurerm_container_app_environment" "main" {
   resource_group_name        = azurerm_resource_group.main.name
   location                   = azurerm_resource_group.main.location
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+
+  # Declaring a workload profile opts into a full "workload profiles" environment
+  # instead of the newer, cheaper "Express" environment type, which doesn't
+  # support TCP ingress (needed below for the MySQL/Redis internal ingress).
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+  }
 }
 
 # --- Database tier (MySQL, internal only) ---
@@ -46,6 +54,7 @@ resource "azurerm_container_app" "database" {
   resource_group_name          = azurerm_resource_group.main.name
   container_app_environment_id = azurerm_container_app_environment.main.id
   revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
 
   secret {
     name  = "mysql-root-password"
@@ -104,6 +113,7 @@ resource "azurerm_container_app" "cache" {
   resource_group_name          = azurerm_resource_group.main.name
   container_app_environment_id = azurerm_container_app_environment.main.id
   revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
 
   template {
     min_replicas = 1
@@ -142,6 +152,7 @@ resource "azurerm_container_app" "app" {
   resource_group_name          = azurerm_resource_group.main.name
   container_app_environment_id = azurerm_container_app_environment.main.id
   revision_mode                = "Single"
+  workload_profile_name        = "Consumption"
 
   secret {
     name  = "db-password"
