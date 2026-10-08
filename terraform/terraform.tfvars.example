@@ -1,0 +1,11 @@
+project_name = "cloudinfra"
+location     = "norwayeast"
+environment  = "dev"
+app_version  = "latest"
+
+db_name = "webapp"
+db_user = "webuser"
+
+# Leave these two blank to auto-generate random passwords (recommended):
+db_password      = ""
+db_root_password = ""
