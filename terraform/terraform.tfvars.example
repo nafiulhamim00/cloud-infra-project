@@ -7,6 +7,9 @@ app_version  = "latest"
 db_name = "webapp"
 db_user = "webuser"
 
-# Leave these two blank to auto-generate random passwords (recommended):
-db_password      = ""
-db_root_password = ""
+# Leave blank to auto-generate a random password (recommended):
+db_password = ""
+
+# Your public IP (e.g. from `curl ifconfig.me`), so you can connect with a
+# MySQL client to load the schema. Leave blank to skip.
+my_ip_address = ""

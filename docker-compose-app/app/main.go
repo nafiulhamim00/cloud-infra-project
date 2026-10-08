@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -166,6 +167,15 @@ func dbPassword() string {
 	return ""
 }
 
+// envDefault returns the value of the environment variable named key, or def
+// if it isn't set.
+func envDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
 func newServer() *server {
 	s := &server{
 		dbHost:    os.Getenv("DB_HOST"),
@@ -173,8 +183,19 @@ func newServer() *server {
 	}
 
 	if s.dbHost != "" {
-		dsn := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?parseTime=true",
-			os.Getenv("DB_USER"), dbPassword(), s.dbHost, os.Getenv("DB_NAME"))
+		dbPort := envDefault("DB_PORT", "3306")
+
+		// Managed MySQL (e.g. Azure Database for MySQL Flexible Server) requires
+		// TLS; local Docker/Kubernetes MySQL doesn't have a trusted cert, so TLS
+		// is opt-in via DB_TLS_MODE ("true" to verify against the system CA
+		// pool, "skip-verify" to encrypt without verifying, "" to disable).
+		tlsParam := ""
+		if mode := os.Getenv("DB_TLS_MODE"); mode != "" {
+			tlsParam = "&tls=" + mode
+		}
+
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true%s",
+			os.Getenv("DB_USER"), dbPassword(), s.dbHost, dbPort, os.Getenv("DB_NAME"), tlsParam)
 		db, err := sql.Open("mysql", dsn)
 		if err != nil {
 			log.Fatalf("opening database: %v", err)
@@ -183,7 +204,17 @@ func newServer() *server {
 	}
 
 	if s.redisHost != "" {
-		s.rdb = redis.NewClient(&redis.Options{Addr: s.redisHost + ":6379"})
+		redisPort := envDefault("REDIS_PORT", "6379")
+		opts := &redis.Options{
+			Addr:     s.redisHost + ":" + redisPort,
+			Password: os.Getenv("REDIS_PASSWORD"),
+		}
+		// Managed Redis (e.g. Azure Cache for Redis) requires TLS; local
+		// Docker/Kubernetes Redis doesn't speak TLS at all.
+		if os.Getenv("REDIS_TLS") == "true" {
+			opts.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+		s.rdb = redis.NewClient(opts)
 	}
 
 	return s

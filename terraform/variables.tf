@@ -41,15 +41,14 @@ variable "db_user" {
 }
 
 variable "db_password" {
-  description = "MySQL application user password. Leave blank to auto-generate."
+  description = "MySQL administrator password. Leave blank to auto-generate."
   type        = string
   default     = ""
   sensitive   = true
 }
 
-variable "db_root_password" {
-  description = "MySQL root password. Leave blank to auto-generate."
+variable "my_ip_address" {
+  description = "Your public IP, allow-listed on the MySQL firewall so you can connect with a MySQL client (e.g. to load a schema). Leave blank to skip."
   type        = string
   default     = ""
-  sensitive   = true
 }

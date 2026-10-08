@@ -13,7 +13,7 @@ output "db_password" {
   sensitive = true
 }
 
-output "db_root_password" {
-  value     = local.db_root_password
-  sensitive = true
+output "mysql_fqdn" {
+  description = "MySQL server hostname, for connecting with a MySQL client."
+  value       = azurerm_mysql_flexible_server.main.fqdn
 }

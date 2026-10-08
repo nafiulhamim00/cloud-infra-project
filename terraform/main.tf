@@ -8,15 +8,8 @@ resource "random_password" "db_password" {
   special = false
 }
 
-resource "random_password" "db_root_password" {
-  count   = var.db_root_password == "" ? 1 : 0
-  length  = 24
-  special = false
-}
-
 locals {
-  db_password      = var.db_password != "" ? var.db_password : random_password.db_password[0].result
-  db_root_password = var.db_root_password != "" ? var.db_root_password : random_password.db_root_password[0].result
+  db_password = var.db_password != "" ? var.db_password : random_password.db_password[0].result
 }
 
 resource "azurerm_resource_group" "main" {
@@ -37,126 +30,81 @@ resource "azurerm_container_app_environment" "main" {
   resource_group_name        = azurerm_resource_group.main.name
   location                   = azurerm_resource_group.main.location
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+}
 
-  # Declaring a workload profile opts into a full "workload profiles" environment
-  # instead of the newer, cheaper "Express" environment type, which doesn't
-  # support TCP ingress (needed below for the MySQL/Redis internal ingress).
-  workload_profile {
-    name                  = "Consumption"
-    workload_profile_type = "Consumption"
+# --- Database tier: Azure Database for MySQL Flexible Server ---
+
+resource "azurerm_mysql_flexible_server" "main" {
+  name                   = "mysql-${local.name_prefix}"
+  resource_group_name    = azurerm_resource_group.main.name
+  location               = azurerm_resource_group.main.location
+  administrator_login    = var.db_user
+  administrator_password = local.db_password
+  sku_name               = "B_Standard_B1ms"
+  version                = "8.0.21"
+  backup_retention_days  = 7
+
+  storage {
+    size_gb = 20
   }
 }
 
-# --- Database tier (MySQL, internal only) ---
-
-resource "azurerm_container_app" "database" {
-  name                         = "database"
-  resource_group_name          = azurerm_resource_group.main.name
-  container_app_environment_id = azurerm_container_app_environment.main.id
-  revision_mode                = "Single"
-  workload_profile_name        = "Consumption"
-
-  secret {
-    name  = "mysql-root-password"
-    value = local.db_root_password
-  }
-  secret {
-    name  = "mysql-password"
-    value = local.db_password
-  }
-
-  template {
-    min_replicas = 1
-    max_replicas = 1
-
-    container {
-      name   = "mysql"
-      image  = "mysql:8.0"
-      cpu    = 0.5
-      memory = "1Gi"
-
-      env {
-        name        = "MYSQL_ROOT_PASSWORD"
-        secret_name = "mysql-root-password"
-      }
-      env {
-        name  = "MYSQL_DATABASE"
-        value = var.db_name
-      }
-      env {
-        name  = "MYSQL_USER"
-        value = var.db_user
-      }
-      env {
-        name        = "MYSQL_PASSWORD"
-        secret_name = "mysql-password"
-      }
-    }
-  }
-
-  ingress {
-    external_enabled = false
-    target_port      = 3306
-    transport        = "tcp"
-
-    traffic_weight {
-      latest_revision = true
-      percentage      = 100
-    }
-  }
+resource "azurerm_mysql_flexible_database" "main" {
+  name                = var.db_name
+  resource_group_name = azurerm_resource_group.main.name
+  server_name         = azurerm_mysql_flexible_server.main.name
+  charset             = "utf8mb4"
+  collation           = "utf8mb4_unicode_ci"
 }
 
-# --- Cache tier (Redis, internal only) ---
-
-resource "azurerm_container_app" "cache" {
-  name                         = "cache"
-  resource_group_name          = azurerm_resource_group.main.name
-  container_app_environment_id = azurerm_container_app_environment.main.id
-  revision_mode                = "Single"
-  workload_profile_name        = "Consumption"
-
-  template {
-    min_replicas = 1
-    max_replicas = 1
-
-    container {
-      name   = "redis"
-      image  = "redis:7-alpine"
-      cpu    = 0.25
-      memory = "0.5Gi"
-      args   = ["redis-server", "--appendonly", "yes"]
-    }
-  }
-
-  ingress {
-    external_enabled = false
-    target_port      = 6379
-    transport        = "tcp"
-
-    traffic_weight {
-      latest_revision = true
-      percentage      = 100
-    }
-  }
+# Lets any Azure resource (including this Container App) reach the server;
+# Flexible Server has no VNET-integrated option on the Burstable tier that's
+# simpler to set up for a short-lived demo than public access + firewall rules.
+resource "azurerm_mysql_flexible_server_firewall_rule" "azure_services" {
+  name                = "allow-azure-services"
+  resource_group_name = azurerm_resource_group.main.name
+  server_name         = azurerm_mysql_flexible_server.main.name
+  start_ip_address    = "0.0.0.0"
+  end_ip_address      = "0.0.0.0"
 }
 
-# --- App tier (Go web service, public) ---
-
-locals {
-  database_fqdn = "${azurerm_container_app.database.name}.internal.${azurerm_container_app_environment.main.default_domain}"
-  cache_fqdn    = "${azurerm_container_app.cache.name}.internal.${azurerm_container_app_environment.main.default_domain}"
+resource "azurerm_mysql_flexible_server_firewall_rule" "allow_my_ip" {
+  count               = var.my_ip_address != "" ? 1 : 0
+  name                = "allow-my-ip"
+  resource_group_name = azurerm_resource_group.main.name
+  server_name         = azurerm_mysql_flexible_server.main.name
+  start_ip_address    = var.my_ip_address
+  end_ip_address      = var.my_ip_address
 }
+
+# --- Cache tier: Azure Cache for Redis ---
+
+resource "azurerm_redis_cache" "main" {
+  name                 = "redis-${local.name_prefix}"
+  resource_group_name  = azurerm_resource_group.main.name
+  location             = azurerm_resource_group.main.location
+  capacity             = 0
+  family               = "C"
+  sku_name             = "Basic"
+  non_ssl_port_enabled = false
+  minimum_tls_version  = "1.2"
+}
+
+# --- App tier: Go web service, public ---
 
 resource "azurerm_container_app" "app" {
   name                         = "app"
   resource_group_name          = azurerm_resource_group.main.name
   container_app_environment_id = azurerm_container_app_environment.main.id
   revision_mode                = "Single"
-  workload_profile_name        = "Consumption"
 
   secret {
     name  = "db-password"
     value = local.db_password
+  }
+  secret {
+    name  = "redis-password"
+    value = azurerm_redis_cache.main.primary_access_key
   }
 
   template {
@@ -171,7 +119,11 @@ resource "azurerm_container_app" "app" {
 
       env {
         name  = "DB_HOST"
-        value = local.database_fqdn
+        value = azurerm_mysql_flexible_server.main.fqdn
+      }
+      env {
+        name  = "DB_PORT"
+        value = "3306"
       }
       env {
         name  = "DB_USER"
@@ -186,8 +138,24 @@ resource "azurerm_container_app" "app" {
         value = var.db_name
       }
       env {
+        name  = "DB_TLS_MODE"
+        value = "true"
+      }
+      env {
         name  = "REDIS_HOST"
-        value = local.cache_fqdn
+        value = azurerm_redis_cache.main.hostname
+      }
+      env {
+        name  = "REDIS_PORT"
+        value = tostring(azurerm_redis_cache.main.ssl_port)
+      }
+      env {
+        name        = "REDIS_PASSWORD"
+        secret_name = "redis-password"
+      }
+      env {
+        name  = "REDIS_TLS"
+        value = "true"
       }
     }
   }
@@ -204,7 +172,7 @@ resource "azurerm_container_app" "app" {
   }
 
   depends_on = [
-    azurerm_container_app.database,
-    azurerm_container_app.cache,
+    azurerm_mysql_flexible_database.main,
+    azurerm_mysql_flexible_server_firewall_rule.azure_services,
   ]
 }
