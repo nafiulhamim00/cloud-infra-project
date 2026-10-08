@@ -31,7 +31,7 @@ USER appuser
 ARG APP_VERSION=dev
 
 LABEL org.opencontainers.image.version="$APP_VERSION" \
-      org.opencontainers.image.source="https://github.com/dat515-2026/Md-Nafiul-Hamim-labs"
+      org.opencontainers.image.source="https://github.com/nafiulhamim00/cloud-infra-project"
 
 
 ENV PORT=8080
