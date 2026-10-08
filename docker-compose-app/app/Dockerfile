@@ -13,7 +13,7 @@ COPY . .
 
 # Cross-compile natively for the requested target platform (provided; do not edit).
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 \
-    go build -ldflags "-X main.version=$APP_VERSION" -o /out/dat515-app .
+    go build -ldflags "-X main.version=$APP_VERSION" -o /out/demo-app .
 
 #push for github action
 FROM alpine:3.20 AS final
@@ -23,7 +23,7 @@ RUN apk add --no-cache ca-certificates wget && \
 
 WORKDIR /app
 
-COPY --from=builder --chown=appuser:appgroup /out/dat515-app /app/dat515-app
+COPY --from=builder --chown=appuser:appgroup /out/demo-app /app/demo-app
 
 USER appuser
 
@@ -41,4 +41,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-CMD ["/app/dat515-app"]
+CMD ["/app/demo-app"]

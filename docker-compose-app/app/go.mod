@@ -1,4 +1,4 @@
-module dat515-app
+module demo-app
 
 go 1.26
 

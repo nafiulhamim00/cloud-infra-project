@@ -19,7 +19,7 @@ variable "environment" {
 variable "app_image" {
   description = "Public image to deploy, without the tag (e.g. a Docker Hub repo)."
   type        = string
-  default     = "docker.io/nafiulhamim/dat515-app"
+  default     = "docker.io/nafiulhamim/demo-app"
 }
 
 variable "app_version" {

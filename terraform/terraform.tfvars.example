@@ -1,7 +1,7 @@
 project_name = "cloudinfra"
 location     = "swedencentral"
 environment  = "dev"
-app_image    = "docker.io/nafiulhamim/dat515-app"
+app_image    = "docker.io/nafiulhamim/demo-app"
 app_version  = "latest"
 
 db_name = "webapp"

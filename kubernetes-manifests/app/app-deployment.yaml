@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: nafiulhamim/dat515-app:latest
+          image: nafiulhamim/demo-app:latest
           ports:
             - containerPort: 8080
           env:

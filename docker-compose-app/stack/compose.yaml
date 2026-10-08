@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: ../app
-    image: dat515-app:${APP_VERSION:-dev}
+    image: demo-app:${APP_VERSION:-dev}
     environment:
       - DB_HOST=database
       - DB_USER=webuser

@@ -6,7 +6,7 @@ managed Azure PaaS services instead of Docker Compose or Kubernetes for the data
 ## Architecture
 
 - **`app`** — the Go service, pulled directly from the public image on Docker Hub
-  (`nafiulhamim/dat515-app`), running on an
+  (`nafiulhamim/demo-app`), running on an
   [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/overview) environment,
   external HTTP ingress on port 8080, scales 1→3 replicas.
 - **Azure Database for MySQL Flexible Server** (Burstable B1ms) — the database tier.

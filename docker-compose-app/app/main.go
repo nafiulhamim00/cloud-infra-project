@@ -234,6 +234,6 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("dat515-app %s starting on port %s", version, port)
+	log.Printf("demo-app %s starting on port %s", version, port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
