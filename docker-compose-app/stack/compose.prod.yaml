@@ -1,0 +1,41 @@
+services:
+  app:
+    restart: always
+    environment:
+      - DB_HOST=database
+      - DB_USER=webuser
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - DB_NAME=webapp
+      - REDIS_HOST=cache
+    secrets:
+      - db_password
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 256M
+
+  database:
+    restart: always
+    environment:
+      # unset the plain-text password inherited from compose.yaml to avoid conflicting with *_FILE
+      MYSQL_ROOT_PASSWORD: null
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_DATABASE: webapp
+      MYSQL_USER: webuser
+      MYSQL_PASSWORD: null
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_root_password
+      - db_password
+
+  nginx:
+    restart: always
+    ports:
+      - "80:80"
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  db_root_password:
+    file: ./secrets/db_root_password.txt
