@@ -15,8 +15,10 @@ as an ongoing personal infrastructure project.
 - [`kubernetes-manifests/`](kubernetes-manifests/) — the same stack migrated to Kubernetes:
   Deployments, Services, PersistentVolumeClaims, and ConfigMaps per tier, an nginx reverse proxy,
   and a Horizontal Pod Autoscaler (2→5 replicas on 50% CPU).
-- `terraform/` — *(planned)* Azure infrastructure as code to provision where this runs.
-- `.github/workflows/` — *(planned)* CI/CD pipeline: build, test, push image, deploy.
+- [`terraform/`](terraform/) — Azure infrastructure as code: Container Apps, Azure Database for
+  MySQL Flexible Server, Azure Cache for Redis.
+- [`.github/workflows/`](.github/workflows/) — builds and pushes the app image to Docker Hub on
+  every change under `docker-compose-app/app/`.
 
 ## Stack
 
