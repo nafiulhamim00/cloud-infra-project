@@ -24,14 +24,6 @@ resource "azurerm_resource_group" "main" {
   location = var.location
 }
 
-resource "azurerm_container_registry" "main" {
-  name                = replace("acr${local.name_prefix}", "-", "")
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  sku                 = "Basic"
-  admin_enabled       = true
-}
-
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "log-${local.name_prefix}"
   resource_group_name = azurerm_resource_group.main.name
@@ -151,16 +143,6 @@ resource "azurerm_container_app" "app" {
   container_app_environment_id = azurerm_container_app_environment.main.id
   revision_mode                = "Single"
 
-  registry {
-    server               = azurerm_container_registry.main.login_server
-    username             = azurerm_container_registry.main.admin_username
-    password_secret_name = "registry-password"
-  }
-
-  secret {
-    name  = "registry-password"
-    value = azurerm_container_registry.main.admin_password
-  }
   secret {
     name  = "db-password"
     value = local.db_password
@@ -172,7 +154,7 @@ resource "azurerm_container_app" "app" {
 
     container {
       name   = "app"
-      image  = "${azurerm_container_registry.main.login_server}/dat515-app:${var.app_version}"
+      image  = "${var.app_image}:${var.app_version}"
       cpu    = 0.5
       memory = "1Gi"
 

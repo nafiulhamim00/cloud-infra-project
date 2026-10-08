@@ -10,9 +10,8 @@ Docker Compose or Kubernetes.
 - **Container Apps Environment** — shared runtime hosting all three apps on one internal network.
 - **`database`** — MySQL 8.0, internal ingress only (TCP, port 3306).
 - **`cache`** — Redis 7, internal ingress only (TCP, port 6379).
-- **`app`** — the Go service, pulled from the Container Registry below, external HTTP ingress on
-  port 8080, scales 1→3 replicas.
-- **Container Registry (Basic)** — holds the app image.
+- **`app`** — the Go service, pulled directly from the public image on Docker Hub
+  (`nafiulhamim/dat515-app`), external HTTP ingress on port 8080, scales 1→3 replicas.
 - **Log Analytics Workspace** — required by Container Apps for logs/metrics.
 
 There's no nginx tier here — Container Apps provides ingress, TLS, and scaling natively, so the
@@ -26,8 +25,9 @@ for a demo, not how you'd run a real production database (no managed backups/HA)
 ## Cost
 
 Everything here fits comfortably inside the Azure for Students free credit, but it isn't free
-to leave running indefinitely — the Container Registry and Log Analytics workspace bill by the
-day/GB even when the app sits idle. Run `terraform destroy` when you're done with a demo session.
+to leave running indefinitely — the Log Analytics workspace and the running containers bill by
+the day/GB even when the app sits idle. Run `terraform destroy` when you're done with a demo
+session.
 
 ## Prerequisites
 
@@ -46,23 +46,13 @@ terraform plan
 terraform apply
 ```
 
-The app container won't start successfully until an image actually exists in the registry —
-`terraform apply` creates the registry first, then you build and push the app image, then the
-`app` container app will pull it:
+The app pulls straight from the public Docker Hub image (`nafiulhamim/dat515-app:latest`), so
+there's no registry or push step — `terraform apply` is enough to get the app running.
 
-```bash
-az acr login --name <container_registry_login_server, without ".azurecr.io">
-docker build -t <login_server>/dat515-app:latest ../docker-compose-app/app
-docker push <login_server>/dat515-app:latest
-```
-
-(This manual push step goes away once the CI/CD pipeline in `.github/workflows/` is added.)
-
-Get the app's public URL and registry credentials:
+Get the app's public URL:
 
 ```bash
 terraform output app_url
-terraform output container_registry_login_server
 ```
 
 Tear everything down:
