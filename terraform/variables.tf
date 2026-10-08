@@ -5,9 +5,9 @@ variable "project_name" {
 }
 
 variable "location" {
-  description = "Azure region to deploy into."
+  description = "Azure region to deploy into. Must be one of the regions allowed on your subscription (check with: az policy assignment list)."
   type        = string
-  default     = "norwayeast"
+  default     = "swedencentral"
 }
 
 variable "environment" {
